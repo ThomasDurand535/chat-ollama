@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Ollama</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: #0d1117;
+            color: #e6edf3;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #0d1117;
+        }
+
+        .chat-header {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 60px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .app-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f0f6fc;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f85149;
+            transition: all 0.2s ease;
+        }
+
+        .status-indicator.connected {
+            background: #3fb950;
+        }
+
+        .model-selector select {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: inherit;
+        }
+
+        .model-selector select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .url-input {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: inherit;
+            min-width: 200px;
+            outline: none;
+        }
+
+        .url-input:focus {
+            border-color: #58a6ff;
+        }
+
+        .url-input::placeholder {
+            color: #7d8590;
+        }
+
+        .connect-button {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            min-width: 32px;
+        }
+
+        .connect-button:hover:not(:disabled) {
+            background: #30363d;
+        }
+
+        .connect-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .context-button {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            min-width: 32px;
+        }
+
+        .context-button:hover {
+            background: #30363d;
+        }
+
+        .context-button.active {
+            background: #238636;
+            border-color: #238636;
+        }
+
+        .clear-button {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .clear-button:hover {
+            background: #30363d;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            background: #0d1117;
+        }
+
+        .message {
+            padding: 16px 24px;
+            border-bottom: 1px solid #21262d;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message.user {
+            background: #0d1117;
+        }
+
+        .message.assistant {
+            background: #161b22;
+        }
+
+        .message-header {
+            font-size: 12px;
+            color: #7d8590;
+            font-weight: 600;
+        }
+
+        .message.user .message-header::before {
+            content: "▶ ";
+            color: #58a6ff;
+        }
+
+        .message.assistant .message-header::before {
+            content: "◀ ";
+            color: #3fb950;
+        }
+
+        .message-content {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #e6edf3;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .code-block {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            margin: 12px 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            background: #21262d;
+            border-bottom: 1px solid #30363d;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .code-language {
+            color: #7d8590;
+        }
+
+        .copy-button {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s ease;
+        }
+
+        .copy-button:hover {
+            background: #30363d;
+        }
+
+        .copy-button.copied {
+            background: #238636;
+            border-color: #238636;
+        }
+
+        .code-content {
+            padding: 12px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            color: #e6edf3;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        .typing-indicator {
+            padding: 16px 24px;
+            background: #161b22;
+            border-bottom: 1px solid #21262d;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 6px;
+            height: 6px;
+            background: #58a6ff;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { opacity: 0.3; }
+            30% { opacity: 1; }
+        }
+
+        .typing-text {
+            font-size: 12px;
+            color: #7d8590;
+        }
+
+        .chat-input {
+            background: #161b22;
+            border-top: 1px solid #30363d;
+            padding: 16px 24px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .input-field {
+            flex: 1;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            resize: none;
+            min-height: 44px;
+            max-height: 120px;
+        }
+
+        .input-field:focus {
+            border-color: #58a6ff;
+        }
+
+        .input-field::placeholder {
+            color: #7d8590;
+        }
+
+        .send-button {
+            background: #238636;
+            border: 1px solid #238636;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            min-width: 80px;
+        }
+
+        .send-button:hover:not(:disabled) {
+            background: #2ea043;
+        }
+
+        .send-button:disabled {
+            background: #21262d;
+            border-color: #30363d;
+            color: #7d8590;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            background: #da3633;
+            color: #ffffff;
+            padding: 12px 24px;
+            margin: 0;
+            font-size: 12px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #161b22;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+
+        /* Syntax highlighting pour différents langages */
+        .code-content .keyword { color: #ff7b72; }
+        .code-content .string { color: #a5d6ff; }
+        .code-content .comment { color: #8b949e; font-style: italic; }
+        .code-content .number { color: #79c0ff; }
+        .code-content .function { color: #d2a8ff; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="chat-container">
+            <div class="chat-header">
+                <div class="header-left">
+                    <div class="app-title">Ollama Chat</div>
+                    <div class="status-indicator" :class="{ connected: isConnected }"></div>
+                </div>
+                <div class="header-right">
+                    <input 
+                        v-model="ollamaUrl" 
+                        @keyup.enter="connectToServer"
+                        @blur="connectToServer"
+                        placeholder="http://localhost:11434"
+                        class="url-input"
+                        title="Ollama Server URL"
+                    >
+                    <button class="connect-button" @click="connectToServer" :disabled="loading">
+                        {{ isConnected ? '🔗' : '🔌' }}
+                    </button>
+                    <select v-model="selectedModel" @change="onModelChange" class="model-selector" :disabled="!isConnected">
+                        <option v-for="model in models" :key="model" :value="model">{{ model }}</option>
+                    </select>
+                    <button class="context-button" @click="toggleContext" :class="{ active: keepContext }" title="Toggle context">
+                        {{ keepContext ? '🧠' : '💭' }}
+                    </button>
+                    <button class="clear-button" @click="clearChat">Clear</button>
+                </div>
+            </div>
+
+            <div class="chat-messages" ref="messagesContainer">
+                <div v-if="error" class="error-message">
+                    {{ error }}
+                </div>
+                
+                <div v-for="(message, index) in messages" :key="index" class="message" :class="message.role">
+                    <div class="message-header">
+                        {{ message.role === 'user' ? 'You' : selectedModel }}
+                    </div>
+                    <div class="message-content" v-html="formatMessage(message.content)"></div>
+                </div>
+
+                <div v-if="loading" class="typing-indicator">
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <span class="typing-text">{{ selectedModel }} is thinking...</span>
+                </div>
+            </div>
+
+            <div class="chat-input">
+                <textarea 
+                    v-model="inputMessage" 
+                    @keydown="handleKeyDown"
+                    :disabled="loading"
+                    class="input-field" 
+                    placeholder="Type your message... (Shift+Enter for new line)"
+                    rows="1"
+                    ref="inputField"
+                ></textarea>
+                <button @click="sendMessage" :disabled="loading || !inputMessage.trim()" class="send-button">
+                    {{ loading ? '...' : 'Send' }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    // Configuration - URL par défaut
+                    ollamaUrl: 'http://localhost:11434',
+                    
+                    messages: [],
+                    inputMessage: '',
+                    loading: false,
+                    error: null,
+                    models: [],
+                    selectedModel: '',
+                    isConnected: false,
+                    keepContext: true,
+                    conversationContext: []
+                };
+            },
+            
+            mounted() {
+                this.connectToServer();
+                this.autoResizeTextarea();
+            },
+
+            methods: {
+                async connectToServer() {
+                    if (!this.ollamaUrl.trim()) return;
+                    
+                    // Normaliser l'URL (ajouter http:// si nécessaire)
+                    let url = this.ollamaUrl.trim();
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        url = 'http://' + url;
+                        this.ollamaUrl = url;
+                    }
+                    
+                    await this.loadModels();
+                },
+
+                async loadModels() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(`${this.ollamaUrl}/api/tags`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.models = data.models?.map(model => model.name) || [];
+                            if (this.models.length > 0) {
+                                this.selectedModel = this.models[0];
+                            }
+                            this.isConnected = true;
+                            this.error = null;
+                        } else {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                    } catch (error) {
+                        this.error = `Connection failed: ${error.message}`;
+                        this.isConnected = false;
+                        this.models = [];
+                        this.selectedModel = '';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async sendMessage() {
+                    if (!this.inputMessage.trim() || this.loading) return;
+
+                    const userMessage = this.inputMessage.trim();
+                    this.messages.push({
+                        role: 'user',
+                        content: userMessage
+                    });
+
+                    // Ajouter au contexte si activé
+                    if (this.keepContext) {
+                        this.conversationContext.push({
+                            role: 'user',
+                            content: userMessage
+                        });
+                    }
+
+                    this.inputMessage = '';
+                    this.autoResizeTextarea();
+                    this.loading = true;
+                    this.error = null;
+
+                    this.scrollToBottom();
+
+                    try {
+                        // Préparer le prompt avec contexte
+                        let prompt = userMessage;
+                        if (this.keepContext && this.conversationContext.length > 1) {
+                            // Construire le contexte complet
+                            const contextMessages = this.conversationContext.slice(-10); // Garder les 10 derniers messages max
+                            prompt = contextMessages.map(msg => 
+                                `${msg.role === 'user' ? 'Human' : 'Assistant'}: ${msg.content}`
+                            ).join('\n\n') + '\n\nHuman: ' + userMessage + '\n\nAssistant:';
+                        }
+
+                        const response = await fetch(`${this.ollamaUrl}/api/generate`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                model: this.selectedModel,
+                                prompt: prompt,
+                                stream: false,
+                                options: {
+                                    temperature: 0.7,
+                                    top_p: 0.9
+                                }
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        const assistantResponse = data.response || 'No response received';
+                        
+                        this.messages.push({
+                            role: 'assistant',
+                            content: assistantResponse
+                        });
+
+                        // Ajouter au contexte si activé
+                        if (this.keepContext) {
+                            this.conversationContext.push({
+                                role: 'assistant',
+                                content: assistantResponse
+                            });
+                        }
+
+                        this.isConnected = true;
+
+                    } catch (error) {
+                        this.error = `Error: ${error.message}`;
+                        this.isConnected = false;
+                        this.messages.pop(); // Remove user message on error
+                        if (this.keepContext && this.conversationContext.length > 0) {
+                            this.conversationContext.pop(); // Remove from context too
+                        }
+                    } finally {
+                        this.loading = false;
+                        this.scrollToBottom();
+                    }
+                },
+
+                formatMessage(content) {
+                    // Détection des blocs de code avec ```
+                    const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
+                    
+                    return content.replace(codeBlockRegex, (match, language, code) => {
+                        const lang = language || 'text';
+                        const codeId = 'code_' + Math.random().toString(36).substr(2, 9);
+                        
+                        return `<div class="code-block">
+                            <div class="code-header">
+                                <span class="code-language">${lang}</span>
+                                <button class="copy-button" onclick="copyCode('${codeId}', this)">Copy</button>
+                            </div>
+                            <div class="code-content" id="${codeId}">${this.escapeHtml(code.trim())}</div>
+                        </div>`;
+                    });
+                },
+
+                escapeHtml(text) {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                },
+
+                clearChat() {
+                    this.messages = [];
+                    this.conversationContext = [];
+                    this.error = null;
+                },
+
+                toggleContext() {
+                    this.keepContext = !this.keepContext;
+                    if (!this.keepContext) {
+                        this.conversationContext = [];
+                    }
+                },
+
+                onModelChange() {
+                    // Vider le contexte lors du changement de modèle
+                    this.conversationContext = [];
+                },
+
+                handleKeyDown(event) {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        this.sendMessage();
+                    } else if (event.key === 'Enter' && event.shiftKey) {
+                        // Permettre le saut de ligne avec Shift+Enter
+                        setTimeout(() => this.autoResizeTextarea(), 0);
+                    }
+                },
+
+                autoResizeTextarea() {
+                    const textarea = this.$refs.inputField;
+                    if (textarea) {
+                        textarea.style.height = 'auto';
+                        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+                    }
+                },
+
+                scrollToBottom() {
+                    this.$nextTick(() => {
+                        const container = this.$refs.messagesContainer;
+                        container.scrollTop = container.scrollHeight;
+                    });
+                }
+            }
+        }).mount('#app');
+
+        // Fonction globale pour copier le code
+        function copyCode(codeId, button) {
+            const codeElement = document.getElementById(codeId);
+            const text = codeElement.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy code:', err);
+            });
+        }
+    </script>
+</body>
+</html>
