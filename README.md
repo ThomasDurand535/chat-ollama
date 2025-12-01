@@ -1,5 +1,5 @@
 # Chat Ollama
-![logo (ugly)](assets/horrible-logo.png)
+<img src="assets/horrible-logo.png" width="78">
 ![app preview](assets/app-preview.png)
 
 
@@ -19,7 +19,7 @@ I don’t know why Linux users still don’t have a graphical interface, so I bu
 ## Install locally
 
 ### Build 
-For a first installation you need to build the AppImage
+For a first installation you need to build the AppImage.
 #### Requirements
 - Node.js
 - NPM
@@ -27,19 +27,24 @@ For a first installation you need to build the AppImage
 
 Run:
 ```bash
-# build & install
-sudo ./install.sh -b
-```
-
-
-### Installation
-Once it's built you can easily install/uninstall with the same script file.
-Run:
-```bash
 git clone git@github.com:ThomasDurand535/chat-ollama.git
 cd ./chat-ollama
 chmod +x install.sh
 
+# build & install
+sudo ./install.sh -b
+
+chat-ollama
+```
+
+NB: The -b parameter will build the AppImage and set up the desktop application environment directly (copy the AppImage and create a symbolic link).
+
+
+### (Un)Installation
+Once it's built you can easily install/uninstall with the same script file.
+
+Run:
+```bash
 # install
 sudo ./install.sh -i
 # uninstall
