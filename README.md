@@ -1,5 +1,6 @@
 # Chat Ollama
-<img src="assets/horrible-logo.png" width="78">
+<img src="assets/horrible-logo.png" width="78" />
+	
 ![app preview](assets/app-preview.png)
 
 
