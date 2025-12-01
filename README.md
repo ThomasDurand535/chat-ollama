@@ -5,7 +5,7 @@
 
 
 This is a lightweight interface to chat with an Ollama server. You can run it quickly using Docker Compose or install it locally.
-I don’t know why Linux users still don’t have a graphical interface, so I built my own.
+I don’t know why Linux users still don’t have a graphical interface, so I created my own.
 
 ## Features
 
